@@ -1,0 +1,249 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// ---------------------------------------------------------------------------
+// DATABASE CONFIGURATION
+// ---------------------------------------------------------------------------
+
+// The generator block configures which client should be generated based on this schema
+generator client {
+  provider = "prisma-client-js"
+}
+
+// The datasource block specifies the database connection
+datasource db {
+  provider = "postgresql" // You can change this to "mysql" or "sqlite" if preferred
+  url      = env("DATABASE_URL") // Uses the DATABASE_URL from your environment variables
+}
+
+// ---------------------------------------------------------------------------
+// MODELS: INVENTORY & PART MANAGEMENT
+// ---------------------------------------------------------------------------
+
+// Part represents a type of part/component used in equipment or machinery
+// Parts have stock tracking, supplier information, and are used in maintenance
+model Part {
+  id                String         @id @default(cuid()) // Unique identifier for the part
+  name              String // Name of the part (e.g., "Hydraulic Pump", "Circuit Board")
+  description       String? // Optional detailed description of the part
+  currentStock      Int            @default(0) // How many of this part are currently in inventory
+  minimumStock      Int            @default(1) // Threshold for reordering (alerts when stock falls below this)
+  
+  // Relationships
+  supplierParts     SupplierPart[] // Which suppliers can provide this part, with pricing
+  equipmentParts    EquipmentPart[] // Which equipment uses this part
+  orderItems        OrderItem[] // Purchase orders that include this part
+  maintenanceEvents MaintenanceEvent[] // Maintenance events involving this part
+  
+  // Timestamps
+  createdAt         DateTime       @default(now()) // When this record was created
+  updatedAt         DateTime       @updatedAt // When this record was last updated
+}
+
+// Supplier represents a company that provides parts to the organization
+// Suppliers have contact information and are linked to the parts they provide
+model Supplier {
+  id            String         @id @default(cuid()) // Unique identifier for the supplier
+  name          String // Company name of the supplier
+  contactPerson String? // Name of the primary contact person at the supplier
+  email         String? // Email address for contacting the supplier
+  phone         String? // Phone number for the supplier
+  address       String? // Physical address of the supplier
+  
+  // Relationships
+  supplierParts SupplierPart[] // Parts that this supplier can provide, with pricing
+  orders        Order[] // Purchase orders placed with this supplier
+  
+  // Timestamps
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+// SupplierPart creates a many-to-many relationship between suppliers and parts
+// It includes additional information like price, lead time, and preferred status
+model SupplierPart {
+  id         String   @id @default(cuid())
+  
+  // Relationships with foreign keys
+  supplier   Supplier @relation(fields: [supplierId], references: [id])
+  supplierId String
+  part       Part     @relation(fields: [partId], references: [id])
+  partId     String
+  
+  // Supplier-specific part information
+  price      Float // Cost of the part from this supplier
+  leadTime   Int?     // Estimated time in days for delivery after ordering
+  isPreferred Boolean  @default(false) // Flag to mark this as the preferred supplier for this part
+  
+  // Timestamps
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Ensure each supplier can only have one entry per part
+  @@unique([supplierId, partId])
+}
+
+// ---------------------------------------------------------------------------
+// MODELS: EQUIPMENT & MACHINERY
+// ---------------------------------------------------------------------------
+
+// Equipment represents physical machines or equipment in the production environment
+// Equipment has a status and requires parts for operation and maintenance
+model Equipment {
+  id                String         @id @default(cuid())
+  name              String // Name/model of the equipment
+  serialNumber      String? // Manufacturer's serial number
+  location          String? // Where the equipment is physically located
+  purchaseDate      DateTime? // When the equipment was purchased
+  status            EquipmentStatus @default(HEALTHY) // Current operational status
+  
+  // Relationships
+  equipmentParts    EquipmentPart[] // Parts that are used in this equipment
+  maintenanceEvents MaintenanceEvent[] // History of maintenance performed on this equipment
+  
+  // Timestamps
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+}
+
+// EquipmentPart creates a many-to-many relationship between equipment and parts
+// It tracks which parts are used in which equipment and how many are needed
+model EquipmentPart {
+  id          String    @id @default(cuid())
+  
+  // Relationships with foreign keys
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  equipmentId String
+  part        Part      @relation(fields: [partId], references: [id])
+  partId      String
+  
+  quantity    Int       @default(1) // How many of this part are used in this equipment
+  
+  // Timestamps
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Ensure each equipment can only have one entry per part type
+  @@unique([equipmentId, partId])
+}
+
+// Status options for equipment condition
+// Used to track the operational status of equipment
+enum EquipmentStatus {
+  HEALTHY // Equipment is working properly
+  NEEDS_REPAIR // Equipment is operational but requires maintenance
+  NEEDS_REPLACEMENT // Equipment is non-operational and needs replacement
+}
+
+// ---------------------------------------------------------------------------
+// MODELS: PURCHASING & ORDERING
+// ---------------------------------------------------------------------------
+
+// Order represents a purchase order for parts sent to suppliers
+// Orders have a status that tracks their progress from creation to delivery
+model Order {
+  id          String      @id @default(cuid())
+  orderNumber String      @unique // Visible reference number for the order
+  
+  // Relationship to supplier
+  supplier    Supplier    @relation(fields: [supplierId], references: [id])
+  supplierId  String
+  
+  // Order details
+  orderDate   DateTime    @default(now()) // When the order was placed
+  deliveryDate DateTime? // Expected or actual delivery date
+  status      OrderStatus @default(PENDING) // Current status in the ordering process
+  
+  // Relationships
+  orderItems  OrderItem[] // The specific parts being ordered
+  
+  // Timestamps
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+// OrderItem represents individual line items within a purchase order
+// Each OrderItem connects a part with a quantity and price
+model OrderItem {
+  id        String   @id @default(cuid())
+  
+  // Relationships with foreign keys
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  part      Part     @relation(fields: [partId], references: [id])
+  partId    String
+  
+  // Order line item details
+  quantity  Int // How many of the part are being ordered
+  unitPrice Float // Price per unit for this order (may differ from standard price)
+  
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Ensure each order can only have one entry per part
+  @@unique([orderId, partId])
+}
+
+// Status options for tracking order progress
+// Follows the order lifecycle from creation to completion
+enum OrderStatus {
+  PENDING // Order created but not yet approved
+  APPROVED // Order approved and sent to supplier
+  SHIPPED // Order has been shipped by the supplier
+  DELIVERED // Order has been received
+  CANCELLED // Order was cancelled before completion
+}
+
+// ---------------------------------------------------------------------------
+// MODELS: MAINTENANCE & REPAIRS
+// ---------------------------------------------------------------------------
+
+// MaintenanceEvent tracks all maintenance activities for equipment
+// Records when parts are repaired, replaced, or inspected
+model MaintenanceEvent {
+  id          String             @id @default(cuid())
+  
+  // Relationships with foreign keys
+  equipment   Equipment          @relation(fields: [equipmentId], references: [id])
+  equipmentId String
+  part        Part?              @relation(fields: [partId], references: [id]) // Optional relation to a specific part
+  partId      String?
+  
+  // Event details
+  eventType   MaintenanceType // Type of maintenance performed
+  description String? // Detailed description of the work done
+  scheduledDate DateTime? // When the maintenance was scheduled
+  completedDate DateTime? // When the maintenance was completed
+  createdBy   String? // User or system that created this record
+  
+  // Timestamps
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
+// Type options for different kinds of maintenance activities
+// Used to categorize maintenance events
+enum MaintenanceType {
+  SCHEDULED_MAINTENANCE // Regular planned maintenance
+  BREAKDOWN // Unexpected equipment failure
+  REPAIR // Fixing equipment or parts
+  REPLACEMENT // Replacing parts or equipment
+  INSPECTION // Safety or quality inspection
+}
+
+// MaintenanceSchedule for planning recurring maintenance tasks
+// Helps in preventative maintenance planning
+model MaintenanceSchedule {
+  id           String         @id @default(cuid())
+  name         String // Name of the maintenance schedule/task
+  description  String? // Detailed description of what needs to be done
+  frequency    Int            // How often this task should be performed (in days)
+  lastExecuted DateTime? // When was this maintenance last performed
+  nextDue      DateTime // When is the next maintenance due
+  
+  // Timestamps
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+

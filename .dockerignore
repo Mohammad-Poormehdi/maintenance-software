@@ -1,0 +1,58 @@
+# Ignore node_modules
+node_modules
+
+# Ignore build artifacts
+.next
+out
+dist
+
+# Ignore development files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Ignore debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Ignore IDE and editor files
+.idea
+.vscode
+*.swp
+*.swo
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore test and coverage files
+coverage
+.nyc_output
+
+# Ignore TypeScript build info
+*.tsbuildinfo
+
+# Ignore Vercel specific files
+.vercel
+
+# Ignore package manager specific files
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+.pnp.*
+
+# Ignore git files
+.git
+.gitignore
+
+# Ignore README file
+README.md
+
+# Ignore docker-compose files
+docker-compose*
