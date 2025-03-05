@@ -17,6 +17,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "Maintenance and Inventory Management System",
   description: "A comprehensive solution for maintenance and inventory management",
