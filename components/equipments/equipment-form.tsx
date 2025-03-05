@@ -9,7 +9,6 @@ import { toast } from 'sonner'
 import { format } from 'date-fns'
 import { Calendar as CalendarIcon } from 'lucide-react'
 import { format as formatJalali } from 'date-fns-jalali'
-import { Calendar as JalaliCalendar } from '@/components/ui/jalali-calendar'
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 
@@ -41,6 +40,7 @@ import { cn } from '@/lib/utils'
 // These actions need to be created
 import { createEquipment, updateEquipment } from '@/app/actions/equipments'
 import { faIR } from 'date-fns/locale/fa-IR'
+import { PersianDatePicker } from '@/components/ui/persian-date-picker'
 
 // Form validation schema
 const equipmentFormSchema = z.object({
@@ -192,37 +192,17 @@ export function EquipmentForm({ equipment }: EquipmentFormProps) {
               control={form.control}
               name="purchaseDate"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>تاریخ خرید</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={"outline"}
-                          className={cn(
-                            "w-full pl-3 text-right font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            formatJalali(field.value, "yyyy/MM/dd")
-                          ) : (
-                            <span>انتخاب تاریخ</span>
-                          )}
-                          <CalendarIcon className="mr-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <JalaliCalendar
-                        mode="single"
-                        selected={field.value || undefined}
-                        onSelect={field.onChange}
-                        initialFocus
-                        locale={faIR}
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <PersianDatePicker
+                      value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                      onChange={(dateString) => field.onChange(dateString ? new Date(dateString) : null)}
+                      label=""
+                      placeholder="انتخاب تاریخ"
+                      error={form.formState.errors.purchaseDate?.message}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
