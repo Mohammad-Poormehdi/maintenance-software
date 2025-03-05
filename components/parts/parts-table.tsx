@@ -28,10 +28,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Checkbox } from '@/components/ui/checkbox'
-import { bulkDeleteParts } from '@/app/actions/parts'
-import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
+import { StockComplianceGauge } from '@/components/analytics/stock-compliance-gauge'
+import { MostUsedParts } from '@/components/analytics/most-used-parts'
 
 interface PartsTableProps {
   parts: PartWithRelations[]
@@ -51,7 +50,6 @@ export default function PartsTable({ parts }: PartsTableProps) {
   const [stockFilter, setStockFilter] = useState<'all' | 'low' | 'out'>('all')
   const [sortField, setSortField] = useState<SortField>('name')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-  const [selectedParts, setSelectedParts] = useState<Set<string>>(new Set())
   
   // Filter parts based on the search query and stock level filter
   const filteredParts = parts.filter(part => {
@@ -180,229 +178,191 @@ export default function PartsTable({ parts }: PartsTableProps) {
     setSortOrder(order)
   }
 
-  const togglePartSelection = (partId: string) => {
-    const newSelected = new Set(selectedParts)
-    if (newSelected.has(partId)) {
-      newSelected.delete(partId)
-    } else {
-      newSelected.add(partId)
-    }
-    setSelectedParts(newSelected)
-  }
-
-  const toggleAllSelection = () => {
-    if (selectedParts.size === sortedParts.length) {
-      setSelectedParts(new Set())
-    } else {
-      setSelectedParts(new Set(sortedParts.map(part => part.id)))
-    }
-  }
-
-  const handleBulkDelete = async () => {
-    if (selectedParts.size === 0) return
-
-    const confirmed = window.confirm(`آیا از حذف ${selectedParts.size} قطعه انتخاب شده اطمینان دارید؟`)
-    if (!confirmed) return
-
-    const result = await bulkDeleteParts(Array.from(selectedParts))
-    if (result.success) {
-      toast.success('قطعات با موفقیت حذف شدند')
-      setSelectedParts(new Set())
-    } else {
-      toast.error('خطا در حذف قطعات')
-    }
-  }
-
   // Add this function to handle navigation
   const handleAddPart = () => {
     router.push('/inventory/new')
   }
 
+  // Add this function to calculate compliance percentage
+  const calculateStockCompliance = () => {
+    const partsAboveMinimum = parts.filter(part => part.currentStock > part.minimumStock).length
+    const percentage = Math.round((partsAboveMinimum / parts.length) * 100)
+    return {
+      percentage,
+      partsAboveMinimum,
+      totalParts: parts.length
+    }
+  }
+
+  const compliance = calculateStockCompliance()
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-        <div className="flex flex-col sm:flex-row gap-2 flex-1">
-          <Input
-            placeholder="جستجوی قطعات..."
-            className="max-w-sm"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <div className="space-y-6">
+      {/* Add the analytics section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <StockComplianceGauge 
+          percentage={compliance.percentage}
+          partsAboveMinimum={compliance.partsAboveMinimum}
+          totalParts={compliance.totalParts}
+        />
+        <MostUsedParts />
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
+          <div className="flex flex-col sm:flex-row gap-2 flex-1">
+            <Input
+              placeholder="جستجوی قطعات..."
+              className="max-w-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            
+            <Select
+              value={`${sortField}-${sortOrder}`}
+              onValueChange={handleSortChange}
+            >
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="مرتب‌سازی بر اساس" />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((option) => (
+                  <SelectItem 
+                    key={`${option.field}-${option.label.includes('نزولی') ? 'desc' : 'asc'}`}
+                    value={`${option.field}-${option.label.includes('نزولی') ? 'desc' : 'asc'}`}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <div className="flex gap-2 flex-wrap">
+              <Badge
+                className={`cursor-pointer transition-all ${
+                  stockFilter === 'all' 
+                    ? 'bg-primary text-primary-foreground font-bold'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+                onClick={() => setStockFilter('all')}
+              >
+                همه
+              </Badge>
+              <Badge
+                className={`cursor-pointer transition-all ${
+                  stockFilter === 'low' 
+                    ? 'bg-yellow-100 text-yellow-800 font-bold ring-2 ring-offset-1 ring-primary/40'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+                onClick={() => setStockFilter('low')}
+              >
+                موجودی کم
+              </Badge>
+              <Badge
+                className={`cursor-pointer transition-all ${
+                  stockFilter === 'out' 
+                    ? 'bg-red-100 text-red-800 font-bold ring-2 ring-offset-1 ring-primary/40'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+                onClick={() => setStockFilter('out')}
+              >
+                اتمام موجودی
+              </Badge>
+            </div>
+          </div>
           
-          <Select
-            value={`${sortField}-${sortOrder}`}
-            onValueChange={handleSortChange}
-          >
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="مرتب‌سازی بر اساس" />
-            </SelectTrigger>
-            <SelectContent>
-              {sortOptions.map((option) => (
-                <SelectItem 
-                  key={`${option.field}-${option.label.includes('نزولی') ? 'desc' : 'asc'}`}
-                  value={`${option.field}-${option.label.includes('نزولی') ? 'desc' : 'asc'}`}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          
-          <div className="flex gap-2 flex-wrap">
-            <Badge
-              className={`cursor-pointer transition-all ${
-                stockFilter === 'all' 
-                  ? 'bg-primary text-primary-foreground font-bold'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-              onClick={() => setStockFilter('all')}
-            >
-              همه
-            </Badge>
-            <Badge
-              className={`cursor-pointer transition-all ${
-                stockFilter === 'low' 
-                  ? 'bg-yellow-100 text-yellow-800 font-bold ring-2 ring-offset-1 ring-primary/40'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-              onClick={() => setStockFilter('low')}
-            >
-              موجودی کم
-            </Badge>
-            <Badge
-              className={`cursor-pointer transition-all ${
-                stockFilter === 'out' 
-                  ? 'bg-red-100 text-red-800 font-bold ring-2 ring-offset-1 ring-primary/40'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-              onClick={() => setStockFilter('out')}
-            >
-              اتمام موجودی
-            </Badge>
+          <div className="flex gap-2">
+            <Button onClick={handleAddPart}>افزودن قطعه</Button>
           </div>
         </div>
         
-        <div className="flex gap-2">
-          {selectedParts.size > 0 && (
-            <Button
-              variant="destructive"
-              onClick={handleBulkDelete}
-              className="flex items-center gap-2"
-            >
-              <Trash2Icon className="h-4 w-4" />
-              حذف {selectedParts.size} مورد
-            </Button>
-          )}
-          <Button onClick={handleAddPart}>افزودن قطعه</Button>
-        </div>
-      </div>
-      
-      {/* Table view for larger screens */}
-      <div className="rounded-md border hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">
-                <Checkbox
-                  checked={selectedParts.size === sortedParts.length && sortedParts.length > 0}
-                  onCheckedChange={toggleAllSelection}
-                  className="mr-1"
-                />
-              </TableHead>
-              <TableHead className="text-right">نام قطعه</TableHead>
-              <TableHead className="text-right">توضیحات</TableHead>
-              <TableHead className="text-right">موجودی فعلی</TableHead>
-              <TableHead className="text-right">حداقل موجودی</TableHead>
-              <TableHead className="text-right">وضعیت</TableHead>
-              <TableHead className="text-right">تجهیزات مرتبط</TableHead>
-              <TableHead className="w-[80px] text-right">عملیات</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedParts.length === 0 ? (
+        {/* Table view for larger screens */}
+        <div className="rounded-md border hidden md:block">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={7} className="h-24 text-center">
-                  هیچ قطعه‌ای یافت نشد.
-                </TableCell>
+                <TableHead className="text-right">نام قطعه</TableHead>
+                <TableHead className="text-right">توضیحات</TableHead>
+                <TableHead className="text-right">موجودی فعلی</TableHead>
+                <TableHead className="text-right">حداقل موجودی</TableHead>
+                <TableHead className="text-right">وضعیت</TableHead>
+                <TableHead className="text-right">تجهیزات مرتبط</TableHead>
+                <TableHead className="w-[80px] text-right">عملیات</TableHead>
               </TableRow>
-            ) : (
-              sortedParts.map((part) => (
-                <TableRow key={part.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedParts.has(part.id)}
-                      onCheckedChange={() => togglePartSelection(part.id)}
-                      className="mr-2"
-                    />
-                  </TableCell>
-                  <TableCell className="font-medium">{part.name}</TableCell>
-                  <TableCell>{part.description?.slice(0, 50) || 'ندارد'}{part.description && part.description.length > 50 ? '...' : ''}</TableCell>
-                  <TableCell>{part.currentStock} عدد</TableCell>
-                  <TableCell>{part.minimumStock} عدد</TableCell>
-                  <TableCell>{getStockStatus(part)}</TableCell>
-                  <TableCell>{part.equipmentParts.length > 0 ? `${part.equipmentParts.length} تجهیز` : 'بدون تجهیز'}</TableCell>
-                  <TableCell>
-                    <ActionMenu part={part} />
+            </TableHeader>
+            <TableBody>
+              {sortedParts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-24 text-center">
+                    هیچ قطعه‌ای یافت نشد.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
-      
-      {/* Card view for mobile screens */}
-      <div className="md:hidden">
-        {sortedParts.length === 0 ? (
-          <Card>
-            <CardContent className="h-24 flex items-center justify-center">
-              <p className="text-center text-muted-foreground">هیچ قطعه‌ای یافت نشد.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          sortedParts.map((part) => (
-            <Card key={part.id} className="mb-4">
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={selectedParts.has(part.id)}
-                    onCheckedChange={() => togglePartSelection(part.id)}
-                  />
+              ) : (
+                sortedParts.map((part) => (
+                  <TableRow key={part.id}>
+                    <TableCell className="font-medium">{part.name}</TableCell>
+                    <TableCell>{part.description?.slice(0, 50) || 'ندارد'}{part.description && part.description.length > 50 ? '...' : ''}</TableCell>
+                    <TableCell>{part.currentStock} عدد</TableCell>
+                    <TableCell>{part.minimumStock} عدد</TableCell>
+                    <TableCell>{getStockStatus(part)}</TableCell>
+                    <TableCell>{part.equipmentParts.length > 0 ? `${part.equipmentParts.length} تجهیز` : 'بدون تجهیز'}</TableCell>
+                    <TableCell>
+                      <ActionMenu part={part} />
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+        
+        {/* Card view for mobile screens */}
+        <div className="md:hidden">
+          {sortedParts.length === 0 ? (
+            <Card>
+              <CardContent className="h-24 flex items-center justify-center">
+                <p className="text-center text-muted-foreground">هیچ قطعه‌ای یافت نشد.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            sortedParts.map((part) => (
+              <Card key={part.id} className="mb-4">
+                <CardHeader className="flex flex-row items-start justify-between pb-2">
                   <div>
                     <h3 className="font-medium">{part.name}</h3>
                     <p className="text-sm text-muted-foreground">
                       {part.description || 'بدون توضیحات'}
                     </p>
                   </div>
-                </div>
-                {getStockStatus(part)}
-              </CardHeader>
-              <CardContent className="pb-3 pt-0">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground">موجودی فعلی</span>
-                    <span>{part.currentStock} عدد</span>
+                  {getStockStatus(part)}
+                </CardHeader>
+                <CardContent className="pb-3 pt-0">
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">موجودی فعلی</span>
+                      <span>{part.currentStock} عدد</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">حداقل موجودی</span>
+                      <span>{part.minimumStock} عدد</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">تعداد تجهیزات مرتبط</span>
+                      <span>{part.equipmentParts.length} تجهیز</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-muted-foreground">تعداد تأمین‌کنندگان</span>
+                      <span>{part.supplierParts.length} تأمین‌کننده</span>
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground">حداقل موجودی</span>
-                    <span>{part.minimumStock} عدد</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground">تعداد تجهیزات مرتبط</span>
-                    <span>{part.equipmentParts.length} تجهیز</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-muted-foreground">تعداد تأمین‌کنندگان</span>
-                    <span>{part.supplierParts.length} تأمین‌کننده</span>
-                  </div>
-                </div>
-              </CardContent>
-              <CardFooter className="flex justify-end border-t pt-3">
-                <ActionMenu part={part} />
-              </CardFooter>
-            </Card>
-          ))
-        )}
+                </CardContent>
+                <CardFooter className="flex justify-end border-t pt-3">
+                  <ActionMenu part={part} />
+                </CardFooter>
+              </Card>
+            ))
+          )}
+        </div>
       </div>
     </div>
   )

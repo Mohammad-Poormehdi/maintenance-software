@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Table, 
   TableBody, 
@@ -34,6 +35,7 @@ interface EquipmentsTableProps {
 }
 
 export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
   
@@ -84,7 +86,10 @@ export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem className="cursor-pointer flex items-center">
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => router.push(`/equipments/${equipment.id}`)}
+        >
           <PencilIcon className="mr-2 h-4 w-4" />
           ویرایش
         </DropdownMenuItem>
@@ -120,6 +125,7 @@ export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
           </div>
           <div className="flex flex-col">
             <span className="text-muted-foreground">تاریخ خرید</span>
+            <span>{equipment.purchaseDate ? new Date(equipment.purchaseDate).toLocaleDateString('fa-IR') : 'ندارد'}</span>
           </div>
         </div>
       </CardContent>
@@ -171,7 +177,7 @@ export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
           </div>
         </div>
         
-        <Button>افزودن تجهیزات</Button>
+        <Button onClick={() => router.push('/equipments/new')}>افزودن تجهیزات</Button>
       </div>
       
       {/* Table view for larger screens */}
@@ -201,6 +207,7 @@ export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
                   <TableCell>{equipment.serialNumber || 'ندارد'}</TableCell>
                   <TableCell>{equipment.location || 'ندارد'}</TableCell>
                   <TableCell>{renderStatusBadge(equipment.status)}</TableCell>
+                  <TableCell>{equipment.purchaseDate ? new Date(equipment.purchaseDate).toLocaleDateString('fa-IR') : 'ندارد'}</TableCell>
                   <TableCell>
                     <ActionMenu equipment={equipment} />
                   </TableCell>

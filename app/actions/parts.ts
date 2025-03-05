@@ -77,4 +77,34 @@ export async function updatePart(
 
   revalidatePath('/inventory')
   return part
+}
+
+async function getPart(partId: string) {
+  const part = await db.part.findUnique({
+    where: { id: partId },
+    include: {
+      equipmentParts: {
+        include: {
+          equipment: {
+            select: {
+              id: true,
+              name: true,
+              status: true,
+            },
+          },
+        },
+      },
+      supplierParts: {
+        include: {
+          supplier: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      },
+    },
+  });
+  
+  return part;
 } 

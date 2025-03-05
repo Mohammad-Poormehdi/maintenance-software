@@ -112,7 +112,7 @@ function MobileNav() {
             <NavItem 
               href="/inventory" 
               icon={<Package size={20} />} 
-              label="موجودی" 
+              label="قطعات" 
               isExpanded={true}
               isMobile={true}
             />
@@ -187,7 +187,7 @@ export function Sidebar() {
           <NavItem 
             href="/inventory" 
             icon={<Package size={20} />} 
-            label="موجودی" 
+            label="قطعات" 
             isExpanded={isExpanded} 
           />
           <NavItem 

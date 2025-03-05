@@ -1,14 +1,104 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StockComplianceGauge } from "@/components/analytics/stock-compliance-gauge";
+import { getStockComplianceKPI } from "@/app/actions/analytics";
+import { InventoryTurnoverChart } from "@/components/analytics/inventory-turnover-chart";
+import { getInventoryTurnoverData } from "@/app/actions/analytics";
+import { StockOutChart } from "@/components/analytics/stock-out-chart";
+import { getStockOutData } from "@/app/actions/analytics";
+import { MostUsedParts } from "@/components/analytics/most-used-parts";
+import { SupplierPriceChart } from "@/components/analytics/supplier-price-chart";
 
 interface AnalyticsTabsProps {
   defaultValue?: string;
 }
 
+interface InventoryTurnoverData {
+  month: string;
+  turnoverRate: number;
+}
+
 export function AnalyticsTabs({ 
   defaultValue = "inventory"
 }: AnalyticsTabsProps) {
+  const [stockCompliance, setStockCompliance] = useState({
+    compliancePercentage: 0,
+    partsAboveMinimum: 0,
+    totalParts: 0,
+    loading: true
+  });
+
+  const [inventoryTurnover, setInventoryTurnover] = useState<{
+    data: InventoryTurnoverData[];
+    trend: number;
+    loading: boolean;
+  }>({
+    data: [],
+    trend: 0,
+    loading: true
+  });
+
+  const [stockOutData, setStockOutData] = useState<{
+    data: { name: string; stockOuts: number; }[];
+    loading: boolean;
+  }>({
+    data: [],
+    loading: true
+  });
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const data = await getStockComplianceKPI();
+        setStockCompliance({
+          ...data,
+          loading: false
+        });
+      } catch (error) {
+        console.error("Error fetching stock compliance data:", error);
+        setStockCompliance(prev => ({ ...prev, loading: false }));
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const turnoverData = await getInventoryTurnoverData();
+        setInventoryTurnover({
+          ...turnoverData,
+          loading: false
+        });
+      } catch (error) {
+        console.error("Error fetching inventory turnover data:", error);
+        setInventoryTurnover(prev => ({ ...prev, loading: false }));
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const data = await getStockOutData();
+        setStockOutData({
+          data,
+          loading: false
+        });
+      } catch (error) {
+        console.error("Error fetching stock-out data:", error);
+        setStockOutData(prev => ({ ...prev, loading: false }));
+      }
+    }
+
+    fetchData();
+  }, []);
+
   return (
     <Tabs defaultValue={defaultValue} className="w-full" dir="rtl">
       <TabsList className="grid grid-cols-5 mb-8">
@@ -23,24 +113,45 @@ export function AnalyticsTabs({
         <div>
           <h2 className="text-2xl font-bold mb-4">شاخص‌های کلیدی عملکرد مدیریت موجودی</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            <div className="border rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2">مطابقت سطح موجودی</h3>
-              <p className="text-muted-foreground">درصد اقلام موجودی که حداقل الزامات موجودی را برآورده می‌کنند را نشان می‌دهد</p>
-            </div>
+            {stockCompliance.loading ? (
+              <div className="flex items-center justify-center h-64">
+                <p>در حال بارگیری...</p>
+              </div>
+            ) : (
+              <StockComplianceGauge 
+                percentage={stockCompliance.compliancePercentage}
+                partsAboveMinimum={stockCompliance.partsAboveMinimum}
+                totalParts={stockCompliance.totalParts}
+              />
+            )}
             
-            <div className="sm:col-span-2 border rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2">نرخ گردش موجودی</h3>
-              <p className="text-muted-foreground">اندازه‌گیری تناوب استفاده و جایگزینی موجودی</p>
-            </div>
-            
-            <div className="border rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2">فراوانی کمبود موجودی</h3>
-              <p className="text-muted-foreground">شکست‌های بحرانی موجودی را برجسته می‌کند</p>
-            </div>
+            {stockOutData.loading ? (
+              <div className="flex items-center justify-center h-64">
+                <p>در حال بارگیری...</p>
+              </div>
+            ) : (
+              <StockOutChart />
+            )}
+
             <div className="border rounded-lg p-6">
               <h3 className="text-xl font-semibold mb-2">۱۰ قطعه پرمصرف برتر</h3>
               <p className="text-muted-foreground">مهمترین اقلام موجودی را شناسایی می‌کند</p>
             </div>
+            
+            <div className="col-span-full">
+              {inventoryTurnover.loading ? (
+                <div className="flex items-center justify-center h-64">
+                  <p>در حال بارگیری...</p>
+                </div>
+              ) : (
+                <InventoryTurnoverChart 
+                  data={inventoryTurnover.data}
+                  trend={inventoryTurnover.trend}
+                />
+              )}
+            </div>
+
+            <MostUsedParts />
           </div>
         </div>
       </TabsContent>
@@ -49,13 +160,10 @@ export function AnalyticsTabs({
         <div>
           <h2 className="text-2xl font-bold mb-4">شاخص‌های کلیدی عملکرد تامین‌کننده</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            <SupplierPriceChart />
             <div className="border rounded-lg p-6">
               <h3 className="text-xl font-semibold mb-2">عملکرد زمان تحویل تامین‌کننده</h3>
               <p className="text-muted-foreground">قابلیت اطمینان تامین‌کننده در تحقق وعده‌های تحویل را اندازه‌گیری می‌کند</p>
-            </div>
-            <div className="border rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-2">رقابت‌پذیری قیمت تامین‌کننده</h3>
-              <p className="text-muted-foreground">روابط مقرون به صرفه با تامین‌کنندگان را شناسایی می‌کند</p>
             </div>
             <div className="border rounded-lg p-6">
               <h3 className="text-xl font-semibold mb-2">نرخ تکمیل سفارش</h3>

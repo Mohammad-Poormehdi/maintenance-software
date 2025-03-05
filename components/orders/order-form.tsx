@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm, useFieldArray } from 'react-hook-form'
@@ -26,6 +26,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { PersianDatePicker } from '@/components/ui/persian-date-picker'
+import { createOrder } from '@/app/actions/orders'
 
 // Form validation schema
 const orderFormSchema = z.object({
@@ -48,16 +50,20 @@ interface Supplier {
 interface Part {
   id: string
   name: string
+  price?: number
 }
 
 interface OrderFormProps {
   suppliers: Supplier[]
-  parts: Part[]
+  supplierParts: Record<string, Part[]>
+  allParts: Part[]
 }
 
-export function OrderForm({ suppliers, parts }: OrderFormProps) {
+export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('')
+  const [availableParts, setAvailableParts] = useState<Part[]>(allParts)
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
@@ -73,19 +79,74 @@ export function OrderForm({ suppliers, parts }: OrderFormProps) {
     control: form.control,
   })
 
+  // Update available parts when supplier changes
+  useEffect(() => {
+    if (selectedSupplierId) {
+      const supplierSpecificParts = supplierParts[selectedSupplierId] || [];
+      setAvailableParts(supplierSpecificParts);
+      
+      // Reset part selections when supplier changes
+      const currentOrderItems = form.getValues().orderItems;
+      const updatedOrderItems = currentOrderItems.map(item => ({
+        ...item,
+        partId: '',
+        unitPrice: 0
+      }));
+      form.setValue('orderItems', updatedOrderItems);
+    } else {
+      setAvailableParts([]);
+    }
+  }, [selectedSupplierId, supplierParts, form]);
+
+  // New function to handle part selection and auto-set price
+  const handlePartSelection = (partId: string, index: number) => {
+    const selectedPart = availableParts.find(part => part.id === partId);
+    
+    // Update the part ID
+    form.setValue(`orderItems.${index}.partId`, partId);
+    
+    // Set the price from the supplier part data
+    if (selectedPart && selectedPart.price !== undefined) {
+      form.setValue(`orderItems.${index}.unitPrice`, selectedPart.price);
+    } else {
+      form.setValue(`orderItems.${index}.unitPrice`, 0);
+    }
+  };
+
+  // New function to calculate order summary
+  const calculateOrderSummary = () => {
+    const orderItems = form.watch('orderItems');
+    
+    // Calculate total items and cost
+    const totalItems = orderItems.reduce((sum, item) => 
+      sum + (item.quantity || 0), 0);
+    
+    const totalCost = orderItems.reduce((sum, item) => 
+      sum + ((item.quantity || 0) * (item.unitPrice || 0)), 0);
+    
+    return { totalItems, totalCost };
+  };
+
+  // Get part name by id
+  const getPartName = (partId: string) => {
+    const part = availableParts.find(p => p.id === partId);
+    return part?.name || '';
+  };
+
+  // Calculate order summary
+  const { totalItems, totalCost } = calculateOrderSummary();
+
   async function onSubmit(data: OrderFormValues) {
     startTransition(async () => {
       try {
-        const response = await fetch('/api/orders', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        })
-
-        if (!response.ok) throw new Error('خطا در ثبت سفارش')
+        const result = await createOrder(data)
         
-        toast.success('سفارش با موفقیت ثبت شد')
-        router.push('/orders')
+        if (result.success) {
+          toast.success('سفارش با موفقیت ثبت شد')
+          router.push('/orders')
+        } else {
+          toast.error('خطا در ثبت سفارش')
+        }
       } catch (error) {
         toast.error('خطا در ثبت سفارش')
       }
@@ -106,7 +167,13 @@ export function OrderForm({ suppliers, parts }: OrderFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>تامین‌کننده</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select 
+                    onValueChange={(value) => {
+                      field.onChange(value);
+                      setSelectedSupplierId(value);
+                    }} 
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="تامین‌کننده را انتخاب کنید" />
@@ -134,16 +201,20 @@ export function OrderForm({ suppliers, parts }: OrderFormProps) {
                     render={({ field }) => (
                       <FormItem className="flex-1">
                         <FormLabel>قطعه</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select 
+                          onValueChange={(value) => handlePartSelection(value, index)} 
+                          defaultValue={field.value} 
+                          disabled={!selectedSupplierId}
+                        >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="قطعه را انتخاب کنید" />
+                              <SelectValue placeholder={selectedSupplierId ? "قطعه را انتخاب کنید" : "ابتدا تامین‌کننده را انتخاب کنید"} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {parts.map((part) => (
+                            {availableParts.map((part) => (
                               <SelectItem key={part.id} value={part.id}>
-                                {part.name}
+                                {part.name} {part.price !== undefined ? `(${part.price.toLocaleString()} ریال)` : ''}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -163,25 +234,6 @@ export function OrderForm({ suppliers, parts }: OrderFormProps) {
                           <Input
                             type="number"
                             min={1}
-                            {...field}
-                            onChange={e => field.onChange(e.target.valueAsNumber)}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name={`orderItems.${index}.unitPrice`}
-                    render={({ field }) => (
-                      <FormItem className="flex-1">
-                        <FormLabel>قیمت واحد</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            min={0}
                             {...field}
                             onChange={e => field.onChange(e.target.valueAsNumber)}
                           />
@@ -222,12 +274,49 @@ export function OrderForm({ suppliers, parts }: OrderFormProps) {
                 <FormItem>
                   <FormLabel>تاریخ تحویل</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <PersianDatePicker
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="انتخاب تاریخ تحویل"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
+            {/* Order Summary section with theme-aware styling */}
+            {form.watch('orderItems').some(item => item.partId) && (
+              <div className="mt-8 pt-6 border-t">
+                <h3 className="text-lg font-medium mb-4">خلاصه سفارش</h3>
+                
+                <div className="space-y-4 rounded-lg bg-muted p-4 border">
+                  <div className="grid grid-cols-1 gap-2">
+                    {form.watch('orderItems')
+                      .filter(item => item.partId)
+                      .map((item, index) => (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span>{getPartName(item.partId)}</span>
+                          <div className="flex gap-x-4">
+                            <span>{item.quantity} عدد</span>
+                            <span className="text-muted-foreground">
+                              {((item.quantity || 0) * (item.unitPrice || 0)).toLocaleString()} ریال
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                  
+                  <div className="flex justify-between border-t pt-2 font-medium">
+                    <span>مجموع</span>
+                    <div className="flex gap-x-4">
+                      <span>{totalItems} عدد</span>
+                      <span>{totalCost.toLocaleString()} ریال</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
 
           <CardFooter className="flex justify-end space-x-2 space-x-reverse pt-6">
@@ -238,7 +327,7 @@ export function OrderForm({ suppliers, parts }: OrderFormProps) {
             >
               انصراف
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button type="submit" disabled={isPending || !selectedSupplierId}>
               {isPending ? 'در حال ثبت...' : 'ثبت سفارش'}
             </Button>
           </CardFooter>

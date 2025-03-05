@@ -148,19 +148,38 @@ async function seedParts(count: number): Promise<string[]> {
 async function seedSupplierParts(supplierIds: string[], partIds: string[]) {
   const supplierParts = [];
   
-  // For each part, assign 1-3 random suppliers
+  // For each part, assign 5-8 suppliers to ensure good price competition
   for (const partId of partIds) {
-    const numSuppliers = faker.number.int({ min: 1, max: 3 });
+    const numSuppliers = faker.number.int({ min: 5, max: 8 }); // Increased minimum to 5
     const shuffledSuppliers = [...supplierIds].sort(() => 0.5 - Math.random());
     const selectedSuppliers = shuffledSuppliers.slice(0, numSuppliers);
     
+    // Generate a base price for this part
+    const basePrice = faker.number.int({ min: 500000, max: 50000000 });
+    
+    // Track the lowest price variation to set preferred supplier
+    let lowestPriceVariation = Infinity;
+    const supplierVariations: { supplierId: string; variation: number }[] = [];
+    
+    // First pass: calculate price variations
     for (const supplierId of selectedSuppliers) {
+      // Each supplier's price varies by ±30% from the base price
+      const priceVariation = 1 + faker.number.float({ min: -0.3, max: 0.3 });
+      lowestPriceVariation = Math.min(lowestPriceVariation, priceVariation);
+      supplierVariations.push({ supplierId, variation: priceVariation });
+    }
+    
+    // Second pass: create supplier parts with prices
+    for (const { supplierId, variation } of supplierVariations) {
+      const price = Math.round(basePrice * variation);
+      
       supplierParts.push({
         supplierId,
         partId,
-        price: parseFloat(faker.commerce.price({ min: 10, max: 5000 })),
+        price,
         leadTime: faker.number.int({ min: 1, max: 45 }),
-        isPreferred: selectedSuppliers.indexOf(supplierId) === 0 // First supplier is preferred
+        // Make the supplier with the lowest price the preferred one
+        isPreferred: variation === lowestPriceVariation
       });
     }
   }
@@ -275,7 +294,7 @@ async function seedOrders(supplierIds: string[], partIds: string[], count: numbe
           orderId: order.id,
           partId: part.partId,
           quantity: faker.number.int({ min: 1, max: 50 }),
-          unitPrice: parseFloat((part.price * (1 - faker.number.float({ min: -0.1, max: 0.1 }))).toFixed(2)) // Slight variation from supplier price
+          unitPrice: Math.round(part.price * (1 + faker.number.float({ min: -0.1, max: 0.1 })))
         }
       });
     }
