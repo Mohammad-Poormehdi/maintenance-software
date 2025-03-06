@@ -27,12 +27,13 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { PersianDatePicker } from '@/components/ui/persian-date-picker'
-import { createOrder } from '@/app/actions/orders'
+import { createOrder, updateOrder } from '@/app/actions/orders'
 
 // Form validation schema
 const orderFormSchema = z.object({
   supplierId: z.string().min(1, 'انتخاب تامین‌کننده الزامی است'),
   orderItems: z.array(z.object({
+    id: z.string().optional(), // For existing items
     partId: z.string().min(1, 'انتخاب قطعه الزامی است'),
     quantity: z.number().min(1, 'تعداد باید حداقل 1 باشد'),
     unitPrice: z.number().min(0, 'قیمت نمی‌تواند منفی باشد'),
@@ -53,25 +54,63 @@ interface Part {
   price?: number
 }
 
+interface OrderItem {
+  id: string
+  partId: string
+  quantity: number
+  unitPrice: number
+  part: {
+    id: string
+    name: string
+  }
+}
+
+interface Order {
+  id: string
+  supplierId: string
+  deliveryDate: string | null
+  orderItems: OrderItem[]
+}
+
 interface OrderFormProps {
   suppliers: Supplier[]
   supplierParts: Record<string, Part[]>
   allParts: Part[]
+  existingOrder?: Order | null
+  isEditing?: boolean
 }
 
-export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps) {
+export function OrderForm({ 
+  suppliers, 
+  supplierParts, 
+  allParts, 
+  existingOrder, 
+  isEditing = false 
+}: OrderFormProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [selectedSupplierId, setSelectedSupplierId] = useState<string>('')
-  const [availableParts, setAvailableParts] = useState<Part[]>(allParts)
+  const [selectedSupplierId, setSelectedSupplierId] = useState<string>(
+    existingOrder?.supplierId || ''
+  )
+  const [availableParts, setAvailableParts] = useState<Part[]>(
+    selectedSupplierId ? (supplierParts[selectedSupplierId] || []) : allParts
+  )
+
+  // Prepare default values based on whether we're editing or creating
+  const defaultValues: OrderFormValues = {
+    supplierId: existingOrder?.supplierId || '',
+    orderItems: existingOrder?.orderItems.map(item => ({
+      id: item.id,
+      partId: item.partId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice
+    })) || [{ partId: '', quantity: 1, unitPrice: 0 }],
+    deliveryDate: existingOrder?.deliveryDate || '',
+  }
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderFormSchema),
-    defaultValues: {
-      supplierId: '',
-      orderItems: [{ partId: '', quantity: 1, unitPrice: 0 }],
-      deliveryDate: '',
-    },
+    defaultValues,
   })
 
   const { fields, append, remove } = useFieldArray({
@@ -85,20 +124,22 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
       const supplierSpecificParts = supplierParts[selectedSupplierId] || [];
       setAvailableParts(supplierSpecificParts);
       
-      // Reset part selections when supplier changes
-      const currentOrderItems = form.getValues().orderItems;
-      const updatedOrderItems = currentOrderItems.map(item => ({
-        ...item,
-        partId: '',
-        unitPrice: 0
-      }));
-      form.setValue('orderItems', updatedOrderItems);
+      // Only reset part selections if we're not editing an existing order
+      if (!isEditing) {
+        const currentOrderItems = form.getValues().orderItems;
+        const updatedOrderItems = currentOrderItems.map(item => ({
+          ...item,
+          partId: '',
+          unitPrice: 0
+        }));
+        form.setValue('orderItems', updatedOrderItems);
+      }
     } else {
       setAvailableParts([]);
     }
-  }, [selectedSupplierId, supplierParts, form]);
+  }, [selectedSupplierId, supplierParts, form, isEditing]);
 
-  // New function to handle part selection and auto-set price
+  // Handle part selection and auto-set price
   const handlePartSelection = (partId: string, index: number) => {
     const selectedPart = availableParts.find(part => part.id === partId);
     
@@ -113,7 +154,7 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
     }
   };
 
-  // New function to calculate order summary
+  // Calculate order summary
   const calculateOrderSummary = () => {
     const orderItems = form.watch('orderItems');
     
@@ -139,16 +180,29 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
   async function onSubmit(data: OrderFormValues) {
     startTransition(async () => {
       try {
-        const result = await createOrder(data)
+        let result;
+        
+        if (isEditing && existingOrder) {
+          result = await updateOrder(existingOrder.id, data);
+          if (result.success) {
+            toast.success('سفارش با موفقیت بروزرسانی شد')
+          } else {
+            toast.error('خطا در بروزرسانی سفارش')
+          }
+        } else {
+          result = await createOrder(data);
+          if (result.success) {
+            toast.success('سفارش با موفقیت ثبت شد')
+          } else {
+            toast.error('خطا در ثبت سفارش')
+          }
+        }
         
         if (result.success) {
-          toast.success('سفارش با موفقیت ثبت شد')
           router.push('/orders')
-        } else {
-          toast.error('خطا در ثبت سفارش')
         }
       } catch (error) {
-        toast.error('خطا در ثبت سفارش')
+        toast.error(isEditing ? 'خطا در بروزرسانی سفارش' : 'خطا در ثبت سفارش')
       }
     })
   }
@@ -156,7 +210,7 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
   return (
     <Card>
       <CardHeader>
-        <CardTitle>ثبت سفارش جدید</CardTitle>
+        <CardTitle>{isEditing ? 'ویرایش سفارش' : 'ثبت سفارش جدید'}</CardTitle>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -173,6 +227,7 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
                       setSelectedSupplierId(value);
                     }} 
                     defaultValue={field.value}
+                    disabled={isEditing} // Disable changing supplier in edit mode
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -203,7 +258,7 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
                         <FormLabel>قطعه</FormLabel>
                         <Select 
                           onValueChange={(value) => handlePartSelection(value, index)} 
-                          defaultValue={field.value} 
+                          value={field.value} 
                           disabled={!selectedSupplierId}
                         >
                           <FormControl>
@@ -328,7 +383,9 @@ export function OrderForm({ suppliers, supplierParts, allParts }: OrderFormProps
               انصراف
             </Button>
             <Button type="submit" disabled={isPending || !selectedSupplierId}>
-              {isPending ? 'در حال ثبت...' : 'ثبت سفارش'}
+              {isPending 
+                ? (isEditing ? 'در حال بروزرسانی...' : 'در حال ثبت...') 
+                : (isEditing ? 'بروزرسانی سفارش' : 'ثبت سفارش')}
             </Button>
           </CardFooter>
         </form>

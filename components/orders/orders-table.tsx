@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { 
   Table, 
   TableBody, 
@@ -24,11 +25,11 @@ import { MoreHorizontal, PencilIcon, Trash2Icon, FileTextIcon, TruckIcon } from 
 
 // Define status options with colors
 const STATUS_OPTIONS = [
-  { value: 'PENDING', label: 'در انتظار', color: 'bg-slate-100 text-slate-800' },
-  { value: 'APPROVED', label: 'تایید شده', color: 'bg-blue-100 text-blue-800' },
-  { value: 'SHIPPED', label: 'ارسال شده', color: 'bg-indigo-100 text-indigo-800' },
-  { value: 'DELIVERED', label: 'تحویل شده', color: 'bg-green-100 text-green-800' },
-  { value: 'CANCELLED', label: 'لغو شده', color: 'bg-red-100 text-red-800' },
+  { value: 'PENDING', label: 'در انتظار', color: 'bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-white' },
+  { value: 'APPROVED', label: 'تایید شده', color: 'bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-white' },
+  { value: 'SHIPPED', label: 'ارسال شده', color: 'bg-indigo-100 dark:bg-indigo-800 text-indigo-800 dark:text-white' },
+  { value: 'DELIVERED', label: 'تحویل شده', color: 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-white' },
+  { value: 'CANCELLED', label: 'لغو شده', color: 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-white' },
 ]
 
 interface OrdersTableProps {
@@ -38,6 +39,7 @@ interface OrdersTableProps {
 export default function OrdersTable({ orders }: OrdersTableProps) {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([])
+  const router = useRouter()
   
   // Filter orders based on search query and status filter
   const filteredOrders = orders.filter(order => {
@@ -65,7 +67,13 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
   const renderStatusBadge = (status: string) => {
     const statusOption = STATUS_OPTIONS.find(opt => opt.value === status);
     if (statusOption) {
-      return <Badge className={`${statusOption.color} hover:${statusOption.color.replace('bg-', 'bg-')}/80`}>{statusOption.label}</Badge>
+      return (
+        <Badge 
+          className={`${statusOption.color} hover:bg-opacity-90 dark:hover:bg-opacity-90`}
+        >
+          {statusOption.label}
+        </Badge>
+      );
     }
     return <Badge>{status}</Badge>
   }
@@ -87,17 +95,12 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem className="cursor-pointer flex items-center">
-          <FileTextIcon className="mr-2 h-4 w-4" />
-          مشاهده جزئیات
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center">
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => router.push(`/orders/${order.id}`)}
+        >
           <PencilIcon className="mr-2 h-4 w-4" />
           ویرایش
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center">
-          <TruckIcon className="mr-2 h-4 w-4" />
-          بروزرسانی وضعیت
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer flex items-center text-red-600">
           <Trash2Icon className="mr-2 h-4 w-4" />
@@ -160,7 +163,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
             {STATUS_OPTIONS.map(option => (
               <Badge
                 key={option.value}
-                className={`cursor-pointer transition-all ${
+                className={`cursor-pointer  transition-all ${
                   selectedStatuses.includes(option.value) 
                     ? `${option.color} font-bold ring-2 ring-offset-1 ring-primary/40 shadow-sm`
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -187,7 +190,7 @@ export default function OrdersTable({ orders }: OrdersTableProps) {
           </div>
         </div>
         
-        <Button>سفارش جدید</Button>
+        <Button onClick={() => router.push('/orders/new')}>سفارش جدید</Button>
       </div>
       
       {/* Table view for larger screens */}

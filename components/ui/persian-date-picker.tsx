@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
+import { toJalaali, toGregorian, isValidJalaaliDate } from 'jalaali-js'
 
 const PERSIAN_MONTHS = [
   { value: '1', label: 'فروردین' },
@@ -25,6 +26,18 @@ const PERSIAN_MONTHS = [
   { value: '11', label: 'بهمن' },
   { value: '12', label: 'اسفند' },
 ]
+
+// Helper function to get max days in a Persian month
+function getMaxDaysInMonth(jYear: number, jMonth: number): number {
+  if (jMonth <= 6) return 31;
+  if (jMonth <= 11) return 30;
+  return isLeapJalaaliYear(jYear) ? 30 : 29;
+}
+
+// Helper function to check if a Persian year is leap
+function isLeapJalaaliYear(jYear: number): boolean {
+  return isValidJalaaliDate(jYear, 12, 30);
+}
 
 interface PersianDatePickerProps {
   value?: string // ISO date string YYYY-MM-DD
@@ -43,7 +56,7 @@ export function PersianDatePicker({
   error,
   disabled = false,
 }: PersianDatePickerProps) {
-  // Parse date from ISO format
+  // Parse date from ISO format to Persian date
   const parseDate = (dateStr: string) => {
     if (!dateStr) return { year: '', month: '', day: '' }
     
@@ -51,12 +64,17 @@ export function PersianDatePicker({
       const date = new Date(dateStr)
       if (isNaN(date.getTime())) return { year: '', month: '', day: '' }
       
-      // For simplicity, we're using Gregorian dates and just displaying Persian month names
-      // In a real app, you'd use a proper Persian calendar conversion
+      // Convert to Persian date
+      const persianDate = toJalaali(
+        date.getFullYear(),
+        date.getMonth() + 1,
+        date.getDate()
+      )
+      
       return {
-        year: date.getFullYear().toString(),
-        month: (date.getMonth() + 1).toString(),
-        day: date.getDate().toString().padStart(2, '0'),
+        year: persianDate.jy.toString(),
+        month: persianDate.jm.toString(),
+        day: persianDate.jd.toString().padStart(2, '0'),
       }
     } catch {
       return { year: '', month: '', day: '' }
@@ -72,13 +90,24 @@ export function PersianDatePicker({
     if (!isInternalChange.current) return
     
     if (dateValues.year && dateValues.month && dateValues.day) {
-      const year = parseInt(dateValues.year)
-      const month = parseInt(dateValues.month) - 1 // JS months are 0-indexed
-      const day = parseInt(dateValues.day)
+      const jYear = parseInt(dateValues.year)
+      const jMonth = parseInt(dateValues.month)
+      const jDay = parseInt(dateValues.day)
       
-      // Validate date
-      if (year > 0 && month >= 0 && month < 12 && day > 0 && day <= 31) {
-        const date = new Date(year, month, day)
+      // Validate Persian date
+      if (
+        jYear > 0 && 
+        jMonth >= 1 && jMonth <= 12 && 
+        jDay > 0 && jDay <= getMaxDaysInMonth(jYear, jMonth) &&
+        isValidJalaaliDate(jYear, jMonth, jDay)
+      ) {
+        // Convert Persian to Gregorian
+        const gregorian = toGregorian(jYear, jMonth, jDay)
+        const date = new Date(
+          gregorian.gy, 
+          gregorian.gm - 1, 
+          gregorian.gd
+        )
         const isoDate = date.toISOString().split('T')[0]
         
         // Only update if date actually changed
@@ -109,7 +138,7 @@ export function PersianDatePicker({
     ) {
       setDateValues(parsedDate)
     }
-  }, [value])
+  }, [value, dateValues.year, dateValues.month, dateValues.day])
   
   const handleYearChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const yearValue = e.target.value.replace(/\D/g, '')
@@ -124,7 +153,10 @@ export function PersianDatePicker({
   
   const handleDayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const dayValue = e.target.value.replace(/\D/g, '')
-    if (parseInt(dayValue) <= 31 || dayValue === '') {
+    const maxDays = dateValues.year && dateValues.month ? 
+      getMaxDaysInMonth(parseInt(dateValues.year), parseInt(dateValues.month)) : 31;
+      
+    if ((parseInt(dayValue) <= maxDays && parseInt(dayValue) > 0) || dayValue === '') {
       isInternalChange.current = true
       setDateValues(prev => ({ ...prev, day: dayValue }))
     }

@@ -93,10 +93,6 @@ export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
           <PencilIcon className="mr-2 h-4 w-4" />
           ویرایش
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center">
-          <WrenchIcon className="mr-2 h-4 w-4" />
-          نگهداری
-        </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer flex items-center text-red-600">
           <Trash2Icon className="mr-2 h-4 w-4" />
           حذف

@@ -23,6 +23,21 @@ export default async function EquipmentPage({ params }: EquipmentPageProps) {
   try {
     const equipment = await db.equipment.findUnique({
       where: { id: equipmentId },
+      include: {
+        maintenanceEvents: {
+          include: {
+            part: {
+              select: {
+                id: true,
+                name: true,
+              }
+            }
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
     })
     
     if (!equipment) {

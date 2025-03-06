@@ -1,8 +1,17 @@
 import { Suspense } from 'react'
 import { OrderForm } from '@/components/orders/order-form'
 import { db } from '@/lib/db'
+import { notFound } from 'next/navigation'
 
-export default async function NewOrderPage() {
+interface OrderPageProps {
+  params: Promise<{
+    orderId: string
+  }>
+}
+
+export default async function OrderPage({ params }: OrderPageProps) {
+  const { orderId } = await  params
+  
   // Fetch suppliers data
   const suppliers = await db.supplier.findMany({
     select: { 
@@ -43,13 +52,42 @@ export default async function NewOrderPage() {
     select: { id: true, name: true }
   })
 
+  // Check if we're editing an existing order
+  let existingOrder = null
+  if (orderId !== 'new') {
+    const dbOrder = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        orderItems: {
+          include: {
+            part: {
+              select: { id: true, name: true }
+            }
+          }
+        }
+      }
+    })
+    
+    if (!dbOrder) {
+      notFound()
+    }
+    
+    // Format the date to string for the form component
+    existingOrder = {
+      ...dbOrder,
+      deliveryDate: dbOrder.deliveryDate ? dbOrder.deliveryDate.toISOString() : null
+    }
+  }
+
   return (
-    <div className="max-w-4xl mx-auto mx-auto py-6">
+    <div className="max-w-4xl mx-auto py-6">
       <Suspense fallback={<div>Loading...</div>}>
         <OrderForm 
           suppliers={suppliers} 
           supplierParts={partsMap}
-          allParts={allParts} 
+          allParts={allParts}
+          existingOrder={existingOrder}
+          isEditing={orderId !== 'new'} 
         />
       </Suspense>
     </div>

@@ -107,4 +107,23 @@ async function getPart(partId: string) {
   });
   
   return part;
+}
+
+export async function getParts() {
+  try {
+    const parts = await db.part.findMany({
+      select: {
+        id: true,
+        name: true,
+        currentStock: true,
+      },
+      orderBy: {
+        name: 'asc',
+      },
+    })
+    return parts
+  } catch (error) {
+    console.error('Failed to fetch parts:', error)
+    throw new Error('Failed to fetch parts')
+  }
 } 

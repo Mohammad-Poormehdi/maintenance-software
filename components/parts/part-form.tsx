@@ -205,13 +205,6 @@ export function PartForm({ part }: PartFormProps) {
               </div>
             </CardContent>
             <CardFooter className="flex justify-end space-x-2 space-x-reverse pt-6">
-              <Button
-                variant="ghost"
-                onClick={() => router.back()}
-                disabled={isPending}
-              >
-                انصراف
-              </Button>
               <Button type="submit" disabled={isPending}>
                 {isPending ? 'در حال ثبت...' : part ? 'بروزرسانی' : 'ثبت قطعه'}
               </Button>

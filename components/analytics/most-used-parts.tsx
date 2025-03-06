@@ -19,6 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { getMostUsedParts } from "@/app/actions/analytics"
 
 export function MostUsedParts() {
@@ -40,31 +41,25 @@ export function MostUsedParts() {
         <CardDescription>۱۰ قطعه با بیشترین مصرف</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="text-right">نام قطعه</TableHead>
-              <TableHead className="text-center">تعداد مصرف</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {partsData.map((part) => (
-              <TableRow key={part.name}>
-                <TableCell className="text-right">{part.name}</TableCell>
-                <TableCell className="text-center">{part.count}</TableCell>
+        <ScrollArea className="h-[300px]">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-right">نام قطعه</TableHead>
+                <TableHead className="text-center">تعداد مصرف</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {partsData.map((part) => (
+                <TableRow key={part.name}>
+                  <TableCell className="text-right">{part.name}</TableCell>
+                  <TableCell className="text-center">{part.count}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </ScrollArea>
       </CardContent>
-      <CardFooter className="flex-col items-start gap-2 text-sm">
-        <div className="flex gap-2 font-medium leading-none">
-          تحلیل قطعات پرمصرف <TrendingUp className="h-4 w-4" />
-        </div>
-        <div className="leading-none text-muted-foreground">
-          نمایش ۱۰ قطعه با بیشترین مصرف
-        </div>
-      </CardFooter>
     </Card>
   )
 }

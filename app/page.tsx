@@ -1,4 +1,9 @@
+import { redirect } from 'next/navigation';
+
 export default function Home() {
-  return <div>Hello World</div>;
+  redirect('/analytics');
+  
+  // This won't be rendered, but including as a fallback
+  return <div>Redirecting to Analytics...</div>;
 }
 

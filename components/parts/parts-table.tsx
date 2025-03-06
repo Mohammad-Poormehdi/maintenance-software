@@ -29,8 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useRouter } from 'next/navigation'
-import { StockComplianceGauge } from '@/components/analytics/stock-compliance-gauge'
-import { MostUsedParts } from '@/components/analytics/most-used-parts'
 
 interface PartsTableProps {
   parts: PartWithRelations[]
@@ -183,31 +181,8 @@ export default function PartsTable({ parts }: PartsTableProps) {
     router.push('/inventory/new')
   }
 
-  // Add this function to calculate compliance percentage
-  const calculateStockCompliance = () => {
-    const partsAboveMinimum = parts.filter(part => part.currentStock > part.minimumStock).length
-    const percentage = Math.round((partsAboveMinimum / parts.length) * 100)
-    return {
-      percentage,
-      partsAboveMinimum,
-      totalParts: parts.length
-    }
-  }
-
-  const compliance = calculateStockCompliance()
-
   return (
     <div className="space-y-6">
-      {/* Add the analytics section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <StockComplianceGauge 
-          percentage={compliance.percentage}
-          partsAboveMinimum={compliance.partsAboveMinimum}
-          totalParts={compliance.totalParts}
-        />
-        <MostUsedParts />
-      </div>
-
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
           <div className="flex flex-col sm:flex-row gap-2 flex-1">

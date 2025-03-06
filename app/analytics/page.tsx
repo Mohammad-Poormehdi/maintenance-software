@@ -1,13 +1,11 @@
 import { Suspense } from "react";
-import { AnalyticsTabs } from "@/components/analytics/analytics-tabs";
+import { AnalyticsGrid } from "@/components/analytics/analytics-tabs";
 
 export const dynamic = "force-dynamic";
 
 async function AnalyticsContent() {
   return (
-    <AnalyticsTabs
-      defaultValue="inventory"
-    />
+    <AnalyticsGrid />
   );
 }
 

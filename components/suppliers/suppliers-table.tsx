@@ -10,21 +10,10 @@ import {
   TableRow 
 } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { 
-  MoreHorizontal, 
-  PencilIcon, 
-  Trash2Icon, 
   ExternalLinkIcon, 
-  PackageIcon 
 } from 'lucide-react'
 import { SupplierWithRelations } from '@/app/suppliers/page'
 
@@ -44,32 +33,6 @@ export default function SuppliersTable({ suppliers }: SuppliersTableProps) {
       (supplier.phone && supplier.phone.toLowerCase().includes(searchQuery.toLowerCase()))
     )
   })
-
-  // Action dropdown menu component (reused in both views)
-  const ActionMenu = ({ supplier }: { supplier: SupplierWithRelations }) => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="h-8 w-8 p-0">
-          <span className="sr-only">باز کردن منو</span>
-          <MoreHorizontal className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem className="cursor-pointer flex items-center">
-          <PencilIcon className="mr-2 h-4 w-4" />
-          ویرایش
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center">
-          <PackageIcon className="mr-2 h-4 w-4" />
-          سفارش جدید
-        </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center text-red-600">
-          <Trash2Icon className="mr-2 h-4 w-4" />
-          حذف
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
 
   // Card renderer for mobile view
   const SupplierCard = ({ supplier }: { supplier: SupplierWithRelations }) => (
@@ -97,9 +60,6 @@ export default function SuppliersTable({ suppliers }: SuppliersTableProps) {
           </div>
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end border-t pt-3">
-        <ActionMenu supplier={supplier} />
-      </CardFooter>
     </Card>
   )
 
@@ -114,8 +74,6 @@ export default function SuppliersTable({ suppliers }: SuppliersTableProps) {
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        
-        <Button>افزودن تامین‌کننده</Button>
       </div>
       
       {/* Table view for larger screens */}
@@ -128,13 +86,12 @@ export default function SuppliersTable({ suppliers }: SuppliersTableProps) {
               <TableHead className="text-right">ایمیل</TableHead>
               <TableHead className="text-right">تلفن</TableHead>
               <TableHead className="text-right">تعداد قطعات</TableHead>
-              <TableHead className="w-[80px] text-right">عملیات</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredSuppliers.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="h-24 text-center">
+                <TableCell colSpan={5} className="h-24 text-center">
                   هیچ تامین‌کننده‌ای یافت نشد.
                 </TableCell>
               </TableRow>
@@ -167,9 +124,6 @@ export default function SuppliersTable({ suppliers }: SuppliersTableProps) {
                     <Badge className="bg-blue-100 text-blue-800 hover:bg-blue-200">
                       {supplier.supplierParts.length} قطعه
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <ActionMenu supplier={supplier} />
                   </TableCell>
                 </TableRow>
               ))
