@@ -275,37 +275,5 @@ model MaintenanceSchedule {
   updatedAt    DateTime       @updatedAt
 }
 
-// ---------------------------------------------------------------------------
-// MODELS: API AUTHENTICATION
-// ---------------------------------------------------------------------------
 
-// ApiKey represents authentication keys for external API access
-// Allows services to authenticate without requiring a user account
-model ApiKey {
-  id            String    @id @default(cuid())
-  name          String    // Descriptive name for the API key (e.g., "Supplier Integration", "Inventory System")
-  hashedKey     String    @unique // Securely hashed version of the API key for verification
-  
-  // API key metadata
-  description   String?   // Optional description of what this key is used for
-  status        ApiKeyStatus @default(ACTIVE) // Current status of the API key
-  expiresAt     DateTime? // Optional expiration date for the key
-  lastUsed      DateTime? // When the key was last used for authentication
-  
-  // Audit information
-  createdBy     String    // Name or identifier of who/what created this key
-  
-  // Timestamps
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-}
-
-// Status options for API keys
-// Used to control whether keys are active or revoked
-enum ApiKeyStatus {
-  ACTIVE    // Key is active and can be used for authentication
-  INACTIVE  // Key is temporarily disabled but not deleted
-  REVOKED   // Key has been permanently revoked (security reasons)
-  EXPIRED   // Key has passed its expiration date
-}
 
