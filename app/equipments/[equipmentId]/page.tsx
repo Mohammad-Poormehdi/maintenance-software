@@ -24,6 +24,13 @@ export default async function EquipmentPage({ params }: EquipmentPageProps) {
     const equipment = await db.equipment.findUnique({
       where: { id: equipmentId },
       include: {
+        productionLine: {
+          select: {
+            id: true,
+            name: true,
+            status: true,
+          }
+        },
         maintenanceEvents: {
           include: {
             part: {

@@ -2,13 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { StockComplianceGauge } from "@/components/analytics/stock-compliance-gauge";
-import { getStockComplianceKPI } from "@/app/actions/analytics";
+import { getStockComplianceKPI, getMaintenanceScheduleKPIs } from "@/app/actions/analytics";
 import { MostUsedParts } from "@/components/analytics/most-used-parts";
 import { SupplierPriceChart } from "@/components/analytics/supplier-price-chart";
-import { OutOfStockList } from "@/components/analytics/out-of-stock-list";
 import { OrderCancellationChart } from "@/components/analytics/order-cancell-chart";
 import { MaintenanceChart } from "@/components/analytics/maintenance-chart";
 import { OrdersChart } from "@/components/analytics/orders-chart";
+import { 
+  DelayedMaintenanceKPI, 
+  UpcomingWeekMaintenanceKPI, 
+  FutureMaintenanceKPI 
+} from "@/components/analytics/maintenance-schedule-kpi";
+import { EquipmentStatusPieChart } from "@/components/analytics/equipment-status-chart";
 
 // Updating component name to reflect new layout
 export function AnalyticsGrid() {
@@ -19,17 +24,34 @@ export function AnalyticsGrid() {
     loading: true
   });
 
+  const [maintenanceSchedules, setMaintenanceSchedules] = useState({
+    delayedCount: 0,
+    dueWithinWeekCount: 0,
+    futureCount: 0,
+    loading: true
+  });
+
   useEffect(() => {
     async function fetchData() {
       try {
-        const data = await getStockComplianceKPI();
+        const [stockData, maintenanceData] = await Promise.all([
+          getStockComplianceKPI(),
+          getMaintenanceScheduleKPIs()
+        ]);
+        
         setStockCompliance({
-          ...data,
+          ...stockData,
+          loading: false
+        });
+        
+        setMaintenanceSchedules({
+          ...maintenanceData,
           loading: false
         });
       } catch (error) {
-        console.error("Error fetching stock compliance data:", error);
+        console.error("Error fetching analytics data:", error);
         setStockCompliance(prev => ({ ...prev, loading: false }));
+        setMaintenanceSchedules(prev => ({ ...prev, loading: false }));
       }
     }
 
@@ -38,9 +60,27 @@ export function AnalyticsGrid() {
 
   return (
     <div className="w-full space-y-8" dir="rtl">
+      {/* Maintenance KPIs Section */}
+      <section className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <DelayedMaintenanceKPI
+            count={maintenanceSchedules.delayedCount}
+            loading={maintenanceSchedules.loading}
+          />
+          <UpcomingWeekMaintenanceKPI
+            count={maintenanceSchedules.dueWithinWeekCount}
+            loading={maintenanceSchedules.loading}
+          />
+          <FutureMaintenanceKPI
+            count={maintenanceSchedules.futureCount}
+            loading={maintenanceSchedules.loading}
+          />
+        </div>
+      </section>
+
       {/* Inventory KPIs Section */}
       <section className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {stockCompliance.loading ? (
             <div className="flex items-center justify-center h-64">
               <p>در حال بارگیری...</p>
@@ -52,21 +92,23 @@ export function AnalyticsGrid() {
               totalParts={stockCompliance.totalParts}
             />
           )}
-          <OutOfStockList />
           <MostUsedParts />
         </div>
       </section>
 
-      {/* Supplier KPIs Section */}
+      {/* Equipment Status Section */}
       <section className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+          <EquipmentStatusPieChart 
+            title="وضعیت قطعات تجهیزات" 
+            description="تعداد و درصد قطعات در هر وضعیت" 
+          />
           <SupplierPriceChart />
           <OrderCancellationChart />
-          <div className="hidden sm:block" /> {/* Empty div to maintain grid structure */}
         </div>
       </section>
 
-      {/* Maintenance KPIs Section */}
+      {/* Maintenance & Orders Charts Section */}
       <section className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
           <div className="col-span-1 sm:col-span-2 md:col-span-3">

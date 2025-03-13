@@ -12,6 +12,7 @@ const equipmentSchema = z.object({
   location: z.string().optional(),
   purchaseDate: z.date().optional().nullable(),
   status: z.enum(['HEALTHY', 'NEEDS_REPAIR', 'NEEDS_REPLACEMENT']).default('HEALTHY'),
+  productionLineId: z.string().optional().nullable(),
 })
 
 // Create a new equipment

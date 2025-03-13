@@ -14,7 +14,7 @@ const partFormSchema = z.object({
 
 export async function createPart(data: z.infer<typeof partFormSchema>) {
   try {
-    await db.part.create({
+    const part = await db.part.create({
       data: {
         name: data.name,
         description: data.description,
@@ -24,6 +24,7 @@ export async function createPart(data: z.infer<typeof partFormSchema>) {
     })
 
     revalidatePath('/inventory')
+    return part
   } catch (error) {
     console.error("Failed to create part", error)
     throw new Error('Failed to create part')
@@ -79,7 +80,7 @@ export async function updatePart(
   return part
 }
 
-async function getPart(partId: string) {
+export async function getPart(partId: string) {
   const part = await db.part.findUnique({
     where: { id: partId },
     include: {

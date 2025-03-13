@@ -18,7 +18,9 @@ import {
   Calendar, 
   ShoppingCart, 
   Users,
-  Menu
+  Menu,
+  Factory,
+  Key
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -92,6 +94,13 @@ function MobileNav() {
               href="/equipments" 
               icon={<Wrench size={20} />}
               label="تجهیزات" 
+              isExpanded={true}
+              isMobile={true}
+            />
+            <NavItem 
+              href="/production-lines" 
+              icon={<Factory size={20} />}
+              label="خطوط تولید" 
               isExpanded={true}
               isMobile={true}
             />
@@ -170,6 +179,12 @@ export function Sidebar() {
             href="/equipments" 
             icon={<Wrench size={20} />}
             label="تجهیزات" 
+            isExpanded={isExpanded} 
+          />
+          <NavItem 
+            href="/production-lines" 
+            icon={<Factory size={20} />}
+            label="خطوط تولید" 
             isExpanded={isExpanded} 
           />
           <NavItem 

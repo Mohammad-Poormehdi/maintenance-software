@@ -56,26 +56,39 @@ function SupplierPriceChartContent() {
     return <p className="text-center text-muted-foreground">داده‌ای برای نمایش وجود ندارد</p>
   }
 
-  // Get max price for normalization
-  const maxPrice = Math.max(...suppliersData.map(item => item.totalPrice))
+  // Process the data to include average price
+  const processedData = suppliersData.map(supplier => {
+    const avgPrice = supplier.partsCount > 0 
+      ? supplier.totalPrice / supplier.partsCount 
+      : 0;
+    
+    return {
+      ...supplier,
+      avgPrice
+    };
+  });
+
+  // Get max average price for normalization
+  const maxAvgPrice = Math.max(...processedData.map(item => item.avgPrice));
 
   // Transform data for the radar chart
-  const chartData = suppliersData.map(item => ({
+  const chartData = processedData.map(item => ({
     supplier: item.name,
     totalPrice: item.totalPrice,
+    avgPrice: item.avgPrice,
     partsCount: item.partsCount,
     preferredPartsCount: item.preferredPartsCount,
     contactPerson: item.contactPerson,
     email: item.email,
     phone: item.phone,
     // Add a normalized value between 0-100 for better visualization
-    normalizedPrice: (item.totalPrice / maxPrice) * 100
+    normalizedAvgPrice: (item.avgPrice / maxAvgPrice) * 100
   }))
 
   // Create chart config with a single price series
   const chartConfig = {
-    normalizedPrice: {
-      label: "مجموع قیمت نسبی",
+    normalizedAvgPrice: {
+      label: "میانگین قیمت نسبی",
       color: "var(--chart-2)",
     }
   } as ChartConfig
@@ -102,7 +115,7 @@ function SupplierPriceChartContent() {
         />
         <PolarGrid />
         <Radar
-          dataKey="normalizedPrice"
+          dataKey="normalizedAvgPrice"
           fill="var(--chart-2)"
           fillOpacity={0.3}
           stroke="var(--chart-2)"
@@ -127,9 +140,9 @@ export function SupplierPriceChart() {
   return (
     <Card dir="ltr">
       <CardHeader className="items-center pb-4">
-        <CardTitle>مقایسه قیمت کلی تامین‌کنندگان</CardTitle>
+        <CardTitle>مقایسه میانگین قیمت تامین‌کنندگان</CardTitle>
         <CardDescription>
-          مقایسه مجموع قیمت تمام قطعات هر تامین‌کننده
+          مقایسه میانگین قیمت قطعات هر تامین‌کننده
         </CardDescription>
       </CardHeader>
       <CardContent className="pb-0">
@@ -137,7 +150,7 @@ export function SupplierPriceChart() {
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
         <div className="flex gap-2 font-medium leading-none">
-          مقایسه قیمت تامین‌کنندگان <TrendingDown className="h-4 w-4" />
+          مقایسه میانگین قیمت تامین‌کنندگان <TrendingDown className="h-4 w-4" />
         </div>
         <div className="text-muted-foreground text-xs">
           * قیمت‌ها به صورت نسبی نمایش داده شده‌اند

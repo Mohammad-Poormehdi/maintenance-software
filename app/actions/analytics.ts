@@ -2,8 +2,9 @@
 
 import { db } from "@/lib/db";
 import { startOfMonth, subMonths, format } from "date-fns-jalali";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, MaintenanceEvent, MaintenanceType } from "@prisma/client";
 import { startOfDay, endOfDay, eachDayOfInterval } from "date-fns";
+import prisma from "@/lib/prisma";
 
 interface SupplierPriceData {
   part: string;
@@ -537,6 +538,137 @@ export async function getOrdersData(months: number = 3) {
     return result;
   } catch (error) {
     console.error("Error fetching order data:", error);
+    return [];
+  }
+}
+
+export async function getMaintenanceScheduleKPIs() {
+  try {
+    const now = new Date();
+    const oneWeekFromNow = new Date(now);
+    oneWeekFromNow.setDate(now.getDate() + 7);
+    
+    // Count delayed maintenance schedules (due date is in the past)
+    const delayedCount = await db.maintenanceSchedule.count({
+      where: {
+        nextDue: {
+          lt: now
+        }
+      }
+    });
+    
+    // Count maintenance schedules due within a week
+    const dueWithinWeekCount = await db.maintenanceSchedule.count({
+      where: {
+        nextDue: {
+          gte: now,
+          lte: oneWeekFromNow
+        }
+      }
+    });
+    
+    // Count future maintenance schedules (due date is more than a week away)
+    const futureCount = await db.maintenanceSchedule.count({
+      where: {
+        nextDue: {
+          gt: oneWeekFromNow
+        }
+      }
+    });
+    
+    return {
+      delayedCount,
+      dueWithinWeekCount,
+      futureCount
+    };
+  } catch (error) {
+    console.error("Error fetching maintenance schedule KPIs:", error);
+    return {
+      delayedCount: 0,
+      dueWithinWeekCount: 0,
+      futureCount: 0
+    };
+  }
+}
+
+/**
+ * Fetches maintenance event data grouped by month for the specified time period
+ * Compares scheduled maintenance events against all other types combined
+ * @param months Number of months to go back for data retrieval
+ * @returns Array of data points with date, scheduled and other maintenance counts
+ */
+export async function getMaintenanceData(months: number = 3) {
+  // Calculate the date range
+  const endDate = new Date();
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - months);
+  
+  try {
+    // Fetch maintenance events within the date range
+    const maintenanceEvents = await prisma.maintenanceEvent.findMany({
+      where: {
+        completedDate: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        completedDate: true,
+        eventType: true,
+      },
+    });
+    
+    // Group and count events by month and type
+    const monthlyData: Record<string, { scheduled: number; other: number }> = {};
+    
+    // Create array of month start dates from startDate to endDate
+    const monthStarts: Date[] = [];
+    const currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      monthStarts.push(new Date(currentDate));
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    // Initialize monthly data with zeros
+    monthStarts.forEach(date => {
+      const monthKey = date.toISOString().substring(0, 7); // Format as YYYY-MM
+      monthlyData[monthKey] = { scheduled: 0, other: 0 };
+    });
+    
+    // Count events by type and month
+    maintenanceEvents.forEach((event: { completedDate: Date | null; eventType: MaintenanceType }) => {
+      if (!event.completedDate) return;
+      
+      const monthKey = event.completedDate.toISOString().substring(0, 7);
+      
+      if (!monthlyData[monthKey]) {
+        monthlyData[monthKey] = { scheduled: 0, other: 0 };
+      }
+      
+      if (event.eventType === 'SCHEDULED_MAINTENANCE') {
+        monthlyData[monthKey].scheduled += 1;
+      } else {
+        monthlyData[monthKey].other += 1;
+      }
+    });
+    
+    // Convert to array format for chart
+    const result = Object.entries(monthlyData).map(([monthKey, counts]) => {
+      const [year, month] = monthKey.split('-');
+      const date = new Date(parseInt(year), parseInt(month) - 1, 1);
+      
+      return {
+        date: date.toISOString(),
+        scheduled: counts.scheduled,
+        other: counts.other,
+      };
+    });
+    
+    // Sort by date
+    return result.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  } catch (error) {
+    console.error("Error fetching maintenance data:", error);
     return [];
   }
 } 

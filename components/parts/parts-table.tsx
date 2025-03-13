@@ -20,7 +20,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { PartWithRelations } from '@/types/part'
-import { MoreHorizontal, PencilIcon, Trash2Icon, PackageIcon, ShoppingCartIcon, ChevronDown, ChevronUp } from 'lucide-react'
+import { MoreHorizontal, PencilIcon, Trash2Icon, PackageIcon, ShoppingCartIcon, ChevronDown, ChevronUp, InfoIcon } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -111,9 +111,12 @@ export default function PartsTable({ parts }: PartsTableProps) {
           <PencilIcon className="mr-2 h-4 w-4" />
           ویرایش
         </DropdownMenuItem>
-        <DropdownMenuItem className="cursor-pointer flex items-center">
-          <ShoppingCartIcon className="mr-2 h-4 w-4" />
-          سفارش
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => router.push(`/inventory/${part.id}/info`)}
+        >
+          <InfoIcon className="mr-2 h-4 w-4" />
+          نمایش اطلاعات
         </DropdownMenuItem>
         <DropdownMenuItem className="cursor-pointer flex items-center text-red-600">
           <Trash2Icon className="mr-2 h-4 w-4" />

@@ -119,4 +119,94 @@ export async function updateOrder(orderId: string, data: OrderData) {
     console.error('Failed to update order:', error)
     return { success: false, error }
   }
+}
+
+interface GetOrdersParams {
+  status?: 'PENDING' | 'APPROVED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED'
+  page?: number
+  limit?: number
+  supplierId?: string
+  fromDate?: string
+  toDate?: string
+}
+
+export async function getOrders({
+  status,
+  page = 1,
+  limit = 10,
+  supplierId,
+  fromDate,
+  toDate
+}: GetOrdersParams = {}) {
+  try {
+    // Calculate skip for pagination
+    const skip = (page - 1) * limit
+
+    // Build where clause based on filters
+    const where = {
+      ...(status && { status }),
+      ...(supplierId && { supplierId }),
+      ...(fromDate && {
+        orderDate: {
+          gte: new Date(fromDate)
+        }
+      }),
+      ...(toDate && {
+        orderDate: {
+          ...(fromDate ? { gte: new Date(fromDate) } : {}),
+          lte: new Date(toDate)
+        }
+      })
+    }
+
+    // Get orders with related data
+    const [orders, total] = await Promise.all([
+      db.order.findMany({
+        where,
+        include: {
+          supplier: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              phone: true
+            }
+          },
+          orderItems: {
+            include: {
+              part: {
+                select: {
+                  id: true,
+                  name: true,
+                  description: true
+                }
+              }
+            }
+          }
+        },
+        skip,
+        take: limit,
+        orderBy: {
+          orderDate: 'desc'
+        }
+      }),
+      db.order.count({ where })
+    ])
+
+    return {
+      success: true,
+      data: {
+        orders,
+        pagination: {
+          total,
+          pages: Math.ceil(total / limit),
+          page,
+          limit
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to fetch orders:', error)
+    return { success: false, error }
+  }
 } 

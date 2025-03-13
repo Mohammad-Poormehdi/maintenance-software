@@ -21,7 +21,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { EquipmentWithRelations } from '@/types/equipment'
-import { MoreHorizontal, PencilIcon, Trash2Icon, AlertCircleIcon, WrenchIcon, FilterIcon } from 'lucide-react'
+import { MoreHorizontal, PencilIcon, Trash2Icon, AlertCircleIcon, WrenchIcon, FilterIcon, InfoIcon } from 'lucide-react'
 
 // Define status options
 const STATUS_OPTIONS = [
@@ -86,6 +86,13 @@ export default function EquipmentsTable({ equipments }: EquipmentsTableProps) {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem 
+          className="cursor-pointer flex items-center"
+          onClick={() => router.push(`/equipments/${equipment.id}/info`)}
+        >
+          <InfoIcon className="mr-2 h-4 w-4" />
+          نمایش اطلاعات
+        </DropdownMenuItem>
         <DropdownMenuItem 
           className="cursor-pointer flex items-center"
           onClick={() => router.push(`/equipments/${equipment.id}`)}

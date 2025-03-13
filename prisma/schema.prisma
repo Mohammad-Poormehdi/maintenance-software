@@ -98,6 +98,8 @@ model Equipment {
   status            EquipmentStatus @default(HEALTHY) // Current operational status
   
   // Relationships
+  productionLine    ProductionLine? @relation(fields: [productionLineId], references: [id])
+  productionLineId  String?
   equipmentParts    EquipmentPart[] // Parts that are used in this equipment
   maintenanceEvents MaintenanceEvent[] // History of maintenance performed on this equipment
   
@@ -125,6 +127,32 @@ model EquipmentPart {
 
   // Ensure each equipment can only have one entry per part type
   @@unique([equipmentId, partId])
+}
+
+// ProductionLine represents a functional assembly line or manufacturing workflow
+// Each production line can contain multiple pieces of equipment
+model ProductionLine {
+  id           String           @id @default(cuid())
+  name         String           // Name of the production line (e.g., "Assembly Line A", "Packaging Line 2")
+  description  String?          // Optional detailed description of the production line
+  status       ProductionLineStatus @default(OPERATIONAL) // Current operational status
+  capacity     Float?           // Production capacity (units per hour or relevant metric)
+  
+  // Relationships
+  equipment    Equipment[]      // Equipment assigned to this production line
+  
+  // Timestamps
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+// Status options for production line condition
+// Used to track the operational status of production lines
+enum ProductionLineStatus {
+  OPERATIONAL    // Production line is fully operational
+  REDUCED_CAPACITY // Production line is running but with reduced capacity
+  MAINTENANCE    // Production line is currently undergoing maintenance
+  OFFLINE        // Production line is completely offline
 }
 
 // Status options for equipment condition
@@ -245,5 +273,39 @@ model MaintenanceSchedule {
   // Timestamps
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+}
+
+// ---------------------------------------------------------------------------
+// MODELS: API AUTHENTICATION
+// ---------------------------------------------------------------------------
+
+// ApiKey represents authentication keys for external API access
+// Allows services to authenticate without requiring a user account
+model ApiKey {
+  id            String    @id @default(cuid())
+  name          String    // Descriptive name for the API key (e.g., "Supplier Integration", "Inventory System")
+  hashedKey     String    @unique // Securely hashed version of the API key for verification
+  
+  // API key metadata
+  description   String?   // Optional description of what this key is used for
+  status        ApiKeyStatus @default(ACTIVE) // Current status of the API key
+  expiresAt     DateTime? // Optional expiration date for the key
+  lastUsed      DateTime? // When the key was last used for authentication
+  
+  // Audit information
+  createdBy     String    // Name or identifier of who/what created this key
+  
+  // Timestamps
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// Status options for API keys
+// Used to control whether keys are active or revoked
+enum ApiKeyStatus {
+  ACTIVE    // Key is active and can be used for authentication
+  INACTIVE  // Key is temporarily disabled but not deleted
+  REVOKED   // Key has been permanently revoked (security reasons)
+  EXPIRED   // Key has passed its expiration date
 }
 

@@ -53,6 +53,7 @@ import {
 import { createMaintenanceEvent, updateMaintenanceEvent } from '@/app/actions/maintenance-events'
 import { Textarea } from '@/components/ui/textarea'
 import { PartSelector } from '@/components/equipments/part-selector'
+import { ProductionLineSelector } from '@/components/equipments/production-line-selector'
 
 // Form validation schema
 const equipmentFormSchema = z.object({
@@ -61,6 +62,7 @@ const equipmentFormSchema = z.object({
   location: z.string().optional(),
   purchaseDate: z.date().optional().nullable(),
   status: z.enum(['HEALTHY', 'NEEDS_REPAIR', 'NEEDS_REPLACEMENT']).default('HEALTHY'),
+  productionLineId: z.string().optional().nullable(),
 })
 
 type EquipmentFormValues = z.infer<typeof equipmentFormSchema>
@@ -88,6 +90,7 @@ interface EquipmentFormProps {
     location: string | null
     purchaseDate: Date | null
     status: 'HEALTHY' | 'NEEDS_REPAIR' | 'NEEDS_REPLACEMENT'
+    productionLineId: string | null
     maintenanceEvents?: MaintenanceEvent[]
   } | null
 }
@@ -98,6 +101,7 @@ const defaultValues: Partial<EquipmentFormValues> = {
   location: '',
   purchaseDate: null,
   status: 'HEALTHY',
+  productionLineId: null,
 }
 
 // Add maintenance event form schema
@@ -126,6 +130,7 @@ export function EquipmentForm({ equipment }: EquipmentFormProps) {
           location: equipment.location || '',
           purchaseDate: equipment.purchaseDate,
           status: equipment.status,
+          productionLineId: equipment.productionLineId,
         }
       : defaultValues,
   })
@@ -346,6 +351,24 @@ export function EquipmentForm({ equipment }: EquipmentFormProps) {
                       label=""
                       placeholder="انتخاب تاریخ"
                       error={form.formState.errors.purchaseDate?.message}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="productionLineId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>خط تولید</FormLabel>
+                  <FormControl>
+                    <ProductionLineSelector
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="انتخاب خط تولید"
                     />
                   </FormControl>
                   <FormMessage />
