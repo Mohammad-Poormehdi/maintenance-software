@@ -12,7 +12,7 @@ export default async function EquipmentPage({ params }: EquipmentPageProps) {
   // If we're creating a new equipment
   if (equipmentId === 'new') {
     return (
-      <div className="container py-10">
+      <div className="max-w-4xl mx-auto py-10">
         <h1 className="text-2xl font-bold mb-6">افزودن تجهیز جدید</h1>
         <EquipmentForm />
       </div>

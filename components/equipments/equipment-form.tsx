@@ -260,32 +260,6 @@ export function EquipmentForm({ equipment }: EquipmentFormProps) {
     }
   }
 
-  // Add this function to calculate average maintenance time
-  function calculateAverageMaintenanceTime(events: MaintenanceEvent[]): { days: number, count: number, totalDays: number } | null {
-    // Filter events that have both scheduled and completed dates
-    const completedEvents = events.filter(
-      (event) => event.scheduledDate && event.completedDate
-    );
-    
-    if (completedEvents.length === 0) return null;
-    
-    // Calculate time difference in days for each event
-    const totalDays = completedEvents.reduce((sum, event) => {
-      const scheduledDate = new Date(event.scheduledDate!);
-      const completedDate = new Date(event.completedDate!);
-      const diffTime = completedDate.getTime() - scheduledDate.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return sum + diffDays;
-    }, 0);
-    
-    // Calculate average
-    return {
-      days: Math.round(totalDays / completedEvents.length),
-      count: completedEvents.length,
-      totalDays
-    };
-  }
-
   return (
     <Card>
       <CardHeader>
@@ -402,94 +376,6 @@ export function EquipmentForm({ equipment }: EquipmentFormProps) {
                 </FormItem>
               )}
             />
-
-            {/* Replace the ScrollArea with a flex column container */}
-            {equipment?.maintenanceEvents && equipment.maintenanceEvents.length > 0 && (
-              <div className="border-t pt-6">
-                <h3 className="mb-4 text-lg font-medium">سوابق نگهداری و تعمیرات</h3>
-                
-                {/* Move stats block to appear first */}
-                <div className="mb-4 rounded-lg border p-4 bg-muted/50">
-                  <h4 className="font-medium mb-2">آمار نگهداری و تعمیرات</h4>
-                  <div className="text-sm">
-                    <p>
-                      میانگین زمان اتمام عملیات نگهداری: 
-                      <span className="font-bold mx-1">
-                        {calculateAverageMaintenanceTime(equipment.maintenanceEvents)?.days}
-                      </span>
-                      روز
-                    </p>
-                    <p className="mt-1">
-                      مجموع زمان تعمیرات: 
-                      <span className="font-bold mx-1">
-                        {calculateAverageMaintenanceTime(equipment.maintenanceEvents)?.totalDays}
-                      </span>
-                      روز
-                    </p>
-                    <p className="text-muted-foreground text-xs mt-1">
-                      (بر اساس 
-                      <span className="font-medium mx-1">
-                        {calculateAverageMaintenanceTime(equipment.maintenanceEvents)?.count}
-                      </span>
-                      رویداد تکمیل شده)
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col space-y-4">
-                  {equipment.maintenanceEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex flex-col space-y-2 rounded-lg border p-4"
-                    >
-                      <div className="flex items-center justify-between">
-                        <Badge variant="secondary">
-                          {getMaintenanceTypeLabel(event.eventType)}
-                        </Badge>
-                        <div className="flex items-center gap-2">
-                          {event.completedDate ? (
-                            <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-200">
-                              تکمیل شده
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="bg-yellow-50 text-yellow-800 hover:bg-yellow-100">
-                              در انتظار تکمیل
-                            </Badge>  
-                          )}
-                          <span className="text-sm text-muted-foreground">
-                            {event.completedDate
-                              ? formatJalali(event.completedDate, 'yyyy/MM/dd')
-                              : ''}
-                          </span>
-                        </div>
-                      </div>
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground">
-                          {event.description}
-                        </p>
-                      )}
-                      {event.part && (
-                        <div className="text-sm">
-                          قطعه: <span className="font-medium">{event.part.name}</span>
-                        </div>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2 self-end"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          openMaintenanceForm(event);
-                        }}
-                      >
-                        ویرایش
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </CardContent>
           <CardFooter className="flex flex-col items-stretch gap-4 pt-6">
             {/* Add the maintenance button if equipment exists */}

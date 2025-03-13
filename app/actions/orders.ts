@@ -3,6 +3,7 @@
 import { z } from 'zod'
 import { revalidatePath } from 'next/cache'
 import { db } from '@/lib/db'
+import { OrderStatus } from "@prisma/client"
 
 const orderFormSchema = z.object({
   supplierId: z.string().min(1),
@@ -208,5 +209,43 @@ export async function getOrders({
   } catch (error) {
     console.error('Failed to fetch orders:', error)
     return { success: false, error }
+  }
+}
+
+// Type for the return value of getOrderStatusData
+export type OrderStatusData = Record<OrderStatus, number>
+
+/**
+ * Server action to fetch the count of orders by status
+ * @returns A record with order statuses as keys and counts as values
+ */
+export async function getOrderStatusData(): Promise<OrderStatusData> {
+  try {
+    // Initialize the result object with all statuses set to 0
+    const result: OrderStatusData = {
+      PENDING: 0,
+      APPROVED: 0,
+      SHIPPED: 0,
+      DELIVERED: 0,
+      CANCELLED: 0
+    }
+
+    // Get the count of orders for each status
+    const orderCounts = await db.order.groupBy({
+      by: ['status'],
+      _count: {
+        id: true
+      }
+    })
+
+    // Update the result with the actual counts
+    for (const item of orderCounts) {
+      result[item.status] = item._count.id
+    }
+
+    return result
+  } catch (error) {
+    console.error("Error fetching order status data:", error)
+    throw new Error("Failed to fetch order status data")
   }
 } 

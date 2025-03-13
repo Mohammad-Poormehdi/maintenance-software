@@ -19,13 +19,6 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { getOrdersData } from "@/app/actions/analytics"
 
 // Define the type for our order data
@@ -55,29 +48,17 @@ interface OrdersChartProps {
 export function OrdersChart({
   initialData = [],
   title = "روند مالی سفارشات",
-  description = "مرور درآمد سفارشات تکمیل‌شده (تمامی مبالغ به ریال)",
+  description = "مرور درآمد سفارشات تکمیل‌شده در یک سال گذشته (تمامی مبالغ به ریال)",
 }: OrdersChartProps) {
-  const [timeRange, setTimeRange] = React.useState("3m")
   const [data, setData] = React.useState<OrderDataPoint[]>(initialData)
   const [isLoading, setIsLoading] = React.useState(initialData.length === 0)
 
-  // Fetch data when the time range changes
+  // Fetch data on component mount
   React.useEffect(() => {
     async function fetchData() {
       setIsLoading(true)
-      let months = 3 // default for 3m
-      
-      if (timeRange === "1m") {
-        months = 1
-      } else if (timeRange === "6m") {
-        months = 6
-      } else if (timeRange === "1y") {
-        months = 12
-      }
-      
       try {
-        const ordersData = await getOrdersData(months)
-        // Transform data to match the component's interface
+        const ordersData = await getOrdersData(12) // Always fetch 12 months
         const transformedData = ordersData.map(order => ({
           date: order.date,
           deliveredAmount: order.delivered
@@ -91,7 +72,7 @@ export function OrdersChart({
     }
     
     fetchData()
-  }, [timeRange])
+  }, [])
   
   // Calculate total order amounts
   const calculateOrderStats = () => {
@@ -116,28 +97,6 @@ export function OrdersChart({
           <CardTitle>{title}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </div>
-        <Select value={timeRange} onValueChange={setTimeRange}>
-          <SelectTrigger dir="rtl"
-            className="w-[160px] rounded-lg sm:mr-auto"
-            aria-label="انتخاب بازه زمانی"
-          >
-            <SelectValue placeholder="۳ ماه گذشته" />
-          </SelectTrigger>
-          <SelectContent className="rounded-xl">
-            <SelectItem value="1m" className="rounded-lg">
-              ماه گذشته
-            </SelectItem>
-            <SelectItem value="3m" className="rounded-lg">
-              ۳ ماه گذشته
-            </SelectItem>
-            <SelectItem value="6m" className="rounded-lg">
-              ۶ ماه گذشته
-            </SelectItem>
-            <SelectItem value="1y" className="rounded-lg">
-              سال گذشته
-            </SelectItem>
-          </SelectContent>
-        </Select>
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         {isLoading ? (

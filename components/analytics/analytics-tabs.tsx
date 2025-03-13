@@ -14,6 +14,7 @@ import {
   FutureMaintenanceKPI 
 } from "@/components/analytics/maintenance-schedule-kpi";
 import { EquipmentStatusPieChart } from "@/components/analytics/equipment-status-chart";
+import { OrderStatusChart } from "@/components/orders/order-status-chart";
 
 // Updating component name to reflect new layout
 export function AnalyticsGrid() {
@@ -105,6 +106,7 @@ export function AnalyticsGrid() {
           />
           <SupplierPriceChart />
           <OrderCancellationChart />
+          <OrderStatusChart />
         </div>
       </section>
 
